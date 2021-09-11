@@ -1,19 +1,27 @@
 library(readxl)
-Modalities_Data <- read_excel("Modalities_Data.xlsx")
-View(Modalities_Data)
-attach(Modalities_Data)
+Modalities <- read_excel("Modalities_Data.xlsx",
+                              sheet = "Couri")
+View(Modalities)
+attach(Modalities)
 
-library(dplyr)
-Modalities_Data <- Modalities_Data %>%
-  mutate(Sex=recode_factor(Sex,Male="Male",Female="Female"))
+library(tidyverse)
+Modalities <- Modalities %>%
+  mutate(Sex=recode_factor(Sex,Male="Male",Female="Female"))%>%
+  mutate(Intensity=recode_factor(Intensity,
+                 Low="Low",Moderate="Moderate", High="High"))
 
-Baseline <- Modalities_Data %>% filter(Stage == "Baseline")
+Baseline <- Modalities %>% filter(Stage == "Baseline")
 
 library(psych)
 #Descriptives for all
-Baseline %>% group_by(Sex)%>%
 describe(Baseline, na.rm=T, skew=FALSE, ranges=F)
 
 ##Descriptives by Sex
 Baseline %>% describeBy(Baseline$Sex,
                         na.rm=T, skew=FALSE, ranges=F)
+
+
+##Normality test
+library(rstatix)
+shapiro_test(Velocity)
+
