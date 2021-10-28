@@ -1,6 +1,5 @@
 library(readxl)
-Modalities <- read_excel("Modalities_Data.xlsx",
-                              sheet = "Couri")
+Modalities <- read_excel("Data.xlsx", sheet = "Data")
 View(Modalities)
 attach(Modalities)
 
@@ -44,21 +43,12 @@ Treadmill %>%
 
 ##Normality test
 library(rstatix)
-shapiro_test(Velocity)
+shapiro_test(ESS)
 
-## Velocity Analysis
+## ESS Analysis
 
 # Repeated Measures Anova (within 2 x 3 subjects)
-
-library(lme4)
-aov <- aov(Shearstress ~ Modality * Intensity * Sex +
-             Error(ID),
-           data= Modalities)
-anova(aov)
-summary(aov)
-eta_squared(aov)
-
-res.aov <- anova_test(data = Modalities, dv = Velocity,
+res.aov <- anova_test(data = Sabrina, dv = ESS,
                       wid = ID, within = Intensity,
                       between = Modality, effect.size = "pes")
 
@@ -67,15 +57,15 @@ res.aov <- anova_test(data = Modalities, dv = Velocity,
 get_anova_table(res.aov)
 
 # Post-hoc pairwise comparisons Holms-Bonferroni correction
-pwc <- Modalities %>%
+pwc <- Sabrina %>%
   group_by(Intensity) %>%
-  pairwise_t_test(Velocity ~ Modality, paired = TRUE,
-                  p.adjust.method	= "none")
+  pairwise_t_test(ESS ~ Intensity, paired = TRUE,
+                  p.adjust.method	= "holm")
 pwc
 
 # Effect size Cohen's D with Hedge's g correction for small sample size
-Modalities %>%
-  group_by(Intensity)  %>% cohens_d(Velocity ~ Modality,
+Sabrina %>%
+  group_by(Intensity)  %>% cohens_d(ESS ~ Modality,
                     paired = TRUE, hedges.correction = TRUE)
 
 #Plots
@@ -84,89 +74,50 @@ library(ggpubr)
 # Add position for p values in boxplot
 pwc <- pwc %>% add_xy_position(x = "Intensity")
 # Boxplot of Vertical Jump Height
-ggboxplot(Modalities, x = "Intensity", y = "Velocity",
+ESS_plot <- ggboxplot(Sabrina, x = "Intensity", y = "ESS",
                  color = "Modality", palette = get_palette("Set1", 3),
-                  ylab = "Antegrade Velocity (cm/s)") +
+                  ylab = " ESS (dynes/cm2)") +
   stat_pvalue_manual(pwc,size = 2.8,hide.ns = TRUE)
 #Save Plot
-ggsave("Velocity_Sabrina_couri.png")
+ggsave("ESS_Sabrina_acsm.png")
 
 
-## Diameter analysis
-
+## Reynols B analysis
+# Repeated Measures Anova (within 2 x 3 subjects)
 
 # Repeated Measures Anova (within 2 x 3 subjects)
-res.aov2 <- anova_test(data = Modalities, dv = Diameter,
-                      wid = ID, within = Modality,
+res.aov2 <- anova_test(data = Sabrina, dv = RE_B,
+                      wid = ID, within = Intensity,
                       between = Modality, effect.size = "pes")
-
 # Greenhouse-Geisser sphericity correction is automatically applied-
 #-through the Mauchly's Test for Sphericity
 get_anova_table(res.aov2)
 
 # Post-hoc pairwise comparisons Holms-Bonferroni correction
-pwc2 <- Modalities %>%
+pwc2 <- Sabrina %>%
   group_by(Intensity) %>%
-  pairwise_t_test(Diameter ~ Modality, paired = TRUE,
+  pairwise_t_test(RE_B ~ Modality, paired = TRUE,
                   p.adjust.method	= "none")
 pwc2
 
 # Effect size Cohen's D with Hedge's g correction for small sample size
-Modalities %>%
+Sabrina %>%
   group_by(Intensity)  %>%
-  cohens_d(Diameter ~ Modality,
+  cohens_d(RE_B ~ Modality,
       paired = TRUE, hedges.correction = TRUE)
 
 
 # Boxplot of Diameter
 # Add position for p values in boxplot
 pwc2 <- pwc2 %>% add_xy_position(x = "Intensity")
-ggboxplot(Modalities, x = "Intensity", y = "Diameter",
+RE_B_plot <- ggboxplot(Sabrina, x = "Intensity", y = "RE_B",
           color = "Modality", palette = get_palette("Set1", 3),
-          ylab = "Diameter (cm)") +
+          ylab = "Reynolds number B") +
   stat_pvalue_manual(pwc2,size = 2.8,hide.ns = TRUE)
 #Save Plot
-ggsave("Diameter_Sabrina_couri.png")
+ggsave("Reynolds_Sabrina_acsm.png")
 
-
-
-
-
-
-#Womersley shear stress
-
-# Repeated Measures Anova (within 2 x 3 subjects)
-res.aov3 <- anova_test(data = Modalities, dv = Shearstress,
-                      wid = ID, within = Intensity,
-                      between = Modality, effect.size = "pes")
-
-# Greenhouse-Geisser sphericity correction is automatically applied-
-#-through the Mauchly's Test for Sphericity
-get_anova_table(res.aov3)
-
-# Post-hoc pairwise comparisons Holms-Bonferroni correction
-pwc3 <- Modalities %>%
-  group_by(Intensity) %>%
-  pairwise_t_test(Shearstress ~ Modality, paired = TRUE,
-                  p.adjust.method	= "none")
-pwc3
-
-# Effect size Cohen's D with Hedge's g correction for small sample size
-Modalities %>%
-  group_by(Intensity)  %>% cohens_d(Shearstress ~ Modality,
-                                    paired = TRUE, hedges.correction = TRUE)
-
-#Plots
-library(ggplot2)
+## Arrange 2 figures into 1
 library(ggpubr)
-# Add position for p values in boxplot
-pwc3 <- pwc3 %>% add_xy_position(x = "Intensity")
-# Boxplot of Vertical Jump Height
-ggboxplot(Modalities, x = "Intensity", y = "Shearstress",
-          color = "Modality", palette = get_palette("Set1", 7),
-          ylab = " Endothilieal Shear Stress (dynes/cm2)") +
-  stat_pvalue_manual(pwc3,size = 2.8,hide.ns = TRUE)
-#Save Plot
-ggsave("Shearstress_Sabrina_couri.png")
-
-
+ggarrange(ESS_plot, RE_B_plot, ncol = 1, labels = c("A)", "B)"))
+ggsave("ESS_RE_B_gridplot.png")
