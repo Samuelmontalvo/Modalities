@@ -11,14 +11,15 @@ Modalities <- Modalities %>%
                                  Low="Low",Moderate="Moderate", High="High"))
 
 
-Baseline <- Modalities %>% filter(Intensity == "Baseline")
+Baseline <- Modalities %>% filter(Modality == "Baseline")
 
 library(psych)
 #Descriptives for all
-describe(Baseline, na.rm=T, skew=FALSE, ranges=F)
+describe(Baseline, na.rm=T, skew=FALSE, range=F)
+
+describeBy(Baseline ~Sex)
 
 ##CROP DATA
-
 Alondra <- Modalities %>%
   filter(Modality == "Squat" | Modality == "Bench"| Modality =="Biceps")
 attach(Alondra)
@@ -124,7 +125,7 @@ ggsave("Diameter_Alondra_couri.png")
 #Womersley shear stress
 
 # Repeated Measures Anova (within 2 x 3 subjects)
-res.aov3 <- anova_test(data = Alondra, dv = Womersley,
+res.aov3 <- anova_test(data = Alondra, dv = Shearstress,
                        wid = ID, within = Intensity,
                        between = Modality, effect.size = "pes")
 
@@ -135,14 +136,14 @@ get_anova_table(res.aov3)
 # Post-hoc pairwise comparisons Holms-Bonferroni correction
 pwc3 <- Alondra %>%
   group_by(Intensity) %>%
-  pairwise_t_test(Womersley ~ Modality, paired = TRUE,
+  pairwise_t_test(Shearstress ~ Modality, paired = TRUE,
                   p.adjust.method	= "none")
 pwc3
 
 # Effect size Cohen's D with Hedge's g correction for small sample size
 Alondra %>%
   group_by(Intensity)  %>%
-    cohens_d(Womersley ~ Modality,
+    cohens_d(Shearstress ~ Modality,
            paired = TRUE, hedges.correction = TRUE)
 
 #Plots
@@ -151,9 +152,9 @@ library(ggpubr)
 # Add position for p values in boxplot
 pwc3 <- pwc3 %>% add_xy_position(x = "Intensity")
 # Boxplot of Vertical Jump Height
-ggboxplot(Alondra, x = "Intensity", y = "Womersley",
+ggboxplot(Alondra, x = "Intensity", y = "Shearstress",
           color = "Modality", palette = get_palette("Set1", 3),
-          ylab = " Womersley") +
+          ylab = " Endothilieal Shear Stress (dynes/cm2)") +
   stat_pvalue_manual(pwc3,size = 2.8,hide.ns = TRUE)
 #Save Plot
-ggsave("Womersley_Alondra_couri.png")
+ggsave("Shearstress_Alondra_couri.png")
