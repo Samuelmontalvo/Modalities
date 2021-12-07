@@ -1,134 +1,186 @@
 library(readxl)
-Final_Data <- read_excel("Data.xlsx", sheet = "Data")
+Df <- read_excel("Data.xlsx", sheet = "Data_update")
 View(Data)
-attach(Final_Data)
+attach(Df)
+library(dplyr)
+library(tidyverse)
+library(kableExtra)
+library(psych)
+library(ggplot2)
+library(ggpubr)
+library(rstatix)
+library(lme4)
+library(lmerTest)
+
+
 #priori power analysis
 library(pwr)
 pwr.anova.test(f=0.5,k=18,n=7,sig.level=0.05)
 
 ## convert sex and intensity to factors from characters
-library(tidyverse)
-Final_Data <- Final_Data %>%
+Df <- Df %>%
   mutate(Sex=recode_factor(Sex,Male="Male",Female="Female"))%>%
-  mutate(Intensity=recode_factor(Intensity,
+  mutate(Intensity=recode_factor(Intensity, Rest="Rest",
                             Low="Low",Moderate="Moderate", High="High")) %>%
   mutate(Modality=recode_factor(Modality, Rest="Rest",Bike= "Bike",
                 ArmCrank="ArmCrank",Treadmill="Treadmill",
                                 Squat="Squat",Bench="Bench",
                 Biceps="Biceps"))
 
-
-#subset for baseline TABLES
-Baseline <- Final_Data %>% filter(Modality == "Baseline")
-
-drop <- c("ID","Modality","Intensity","Load","LOAD_norm","Squat",
-          "Bench","Biceps","RPE")
-
-Baseline <- Baseline[,!(names(Baseline) %in% drop)]
-
-
-Males <- Baseline %>% filter(Sex=="Male")
-Females <- Baseline %>% filter(Sex=="Females")
-
-t.test(lactate ~ Sex, alternative = "greater", var.equal = FALSE)
-
-cor.test(Squat_kg,VO2_Bike,method="spearman")
-
-model <- lm(Bench_kg~VO2_Treadmill, data = Baseline)
-summary(model)
-
-library(psych)
-#Descriptives for all
-tbl_baseline_all <- describe(Baseline, na.rm=T, skew=FALSE, ranges=F)%>%
-  mutate(across(where(is.numeric), round, 2))
-
-##Drop unused columns from describe package
+#Descriptives
+##Drop unused columns from psych package
 describe_drop <- c("vars","n")
 
-tbl_baseline_all <- tbl_baseline_all[,!(names(tbl_baseline_all) %in%
-                                          describe_drop)]
-## Table visualization
-library(kableExtra)
-tbl_baseline_all %>% kable()%>%
-  kable_classic_2(full_width = F)
-
-##Descriptives by Males
-Male <- Baseline %>% filter(Sex == "Male")
-
-tbl_baseline_Male <- describe(Male, na.rm=T, skew=FALSE, ranges=F)%>%
+#Baseline
+Baseline_all_table <- Df %>% filter(Modality == "Baseline") %>%
+  select(Age,Height,Weight,BMI,SBP,DBP,VO2_Treadmill,VO2_Bike,VO2_ArmCrank,
+         Squat_kg,Bench_kg,Biceps_kg, ESS, ESS_retro,RE_B,) %>%
+  describe(Baseline, na.rm=T, skew=FALSE, ranges=F) %>%
   mutate(across(where(is.numeric), round, 2))
 
-##Drop unused columns from describe package
+Baseline_all_table <-Baseline_all_table[,!(names(Baseline_all_table) %in%
+                                 describe_drop)] %>% kable()%>%
+                  kable_classic_2(full_width = F)
+Baseline_all_table
 
-tbl_baseline_Male <- tbl_baseline_Male[,!(names(tbl_baseline_Male) %in%
-                                          describe_drop)]
-## Table visualization
-tbl_baseline_Male %>% kable()%>%
-  kable_classic_2(full_width = F)
-
-## DEscriprives by Females
-Female <- Baseline %>% filter(Sex == "Female")
-
-tbl_baseline_Female <- describe(Female, na.rm=T, skew=FALSE, ranges=F)%>%
+#MALE
+Baseline_male_table <- Df %>% filter(Modality == "Baseline" & Sex =="Male") %>%
+  select(Age,Height,Weight,BMI,SBP,DBP,VO2_Treadmill,VO2_Bike,VO2_ArmCrank,
+         Squat_kg,Bench_kg,Biceps_kg, ESS, ESS_retro,RE_B,) %>%
+  describe(Baseline, na.rm=T, skew=FALSE, ranges=F) %>%
   mutate(across(where(is.numeric), round, 2))
 
-##Drop unused columns from describe package
-
-tbl_baseline_Female <- tbl_baseline_Female[,!(names(tbl_baseline_Female) %in%
-                                            describe_drop)]
-## Table visualization
-tbl_baseline_Female %>% kable()%>%
+Baseline_male_table <-Baseline_male_table[,!(names(Baseline_male_table) %in%
+                                             describe_drop)] %>% kable()%>%
   kable_classic_2(full_width = F)
+Baseline_male_table
+
+#Female
+Baseline_female_table <- Df %>% filter(Modality == "Baseline" & Sex =="Female") %>%
+  select(Age,Height,Weight,BMI,SBP,DBP,VO2_Treadmill,VO2_Bike,VO2_ArmCrank,
+         Squat_kg,Bench_kg,Biceps_kg, ESS, ESS_retro,RE_B) %>%
+  describe(Baseline, na.rm=T, skew=FALSE, ranges=F) %>%
+  mutate(across(where(is.numeric), round, 2))
+
+Baseline_female_table <-Baseline_female_table[,!(names(Baseline_female_table) %in%
+                                               describe_drop)] %>% kable()%>%
+  kable_classic_2(full_width = F)
+Baseline_female_table
 
 
+ESSandRE_table <- Df %>%  select(ESS, ESS_retro,RE_B) %>% describeBy(Intensity,
+                      na.rm=T, skew=FALSE, ranges=F) %>% kable()%>%  kable_classic_2(full_width = F)
 
-####### Statisitcal Analysis
+ESSandRE_table <- kable()%>%  kable_classic_2(full_width = F)
+ESSandRE_table
 
-#create data frame and drop unused columns
-SA <- Final_Data %>% select("ID","Sex","Intensity","Modality","VO2","Diameter",
-                            "Velocity","Velocity_Ret", "ESS", "RE_B")
 
-SA <-SA[!(SA$Modality=="Baseline"),]
-
+####### Statistical Analysis
 ##Normality Test
-library(rstatix)
-SA %>% shapiro_test(Diameter)
-attach(SA)
+
+Df %>% group_by(Modality) %>%  shapiro_test(ESS)
+
 #General Linear Mixed models
 
-library(lme4)
-library(lmerTest)
-lmModel = lmer(RE_B ~ Modality*Intensity + (1|ID), data=SA, REML=TRUE)
+
+lmModel = lmer(ESS ~ Modality + Intensity + Modality*Intensity + (1|ID),
+               data=Df, REML=TRUE)
+summary(lmModel)
 # mixed model
 anova(lmModel)
 #test of the random effects in the model
 rand(lmModel)
 
-attach(SA)
-pwc <- SA %>%
+pwc <- Df %>%
   group_by(Intensity) %>%
-  pairwise_t_test(RE_B ~ Modality, paired = T,
+  pairwise_t_test(ESS ~ Modality, paired = T,
                   p.adjust.method	= "holm")
-pwc
+pwc %>% kable()%>%
+  kable_classic_2(full_width = F)
 
 # Effect size Cohen's D with Hedge's g correction for small sample size
-SA %>%
-  group_by(Intensity)  %>% cohens_d(RE_B ~ Modality,
+effect <- Df %>%
+  group_by(Intensity)  %>% cohens_d(ESS ~ Modality,
                                     paired = TRUE, hedges.correction = TRUE)
-
+effect %>% kable()%>%
+  kable_classic_2(full_width = F)
 
 
 #Plots
-library(ggplot2)
-library(ggpubr)
 # Add position for p values in boxplot
-pwc <- pwc %>% add_xy_position(x = "RE_B")
+pwc <- pwc %>% add_xy_position(x = "ESS")
 # Boxplot of Vertical Jump Height
-ggboxplot(SA, x = "Intensity", y = "RE_B",
-          color = "Modality", palette = get_palette("Dark2", 7),
-          ylab = "RE_B ") +
-  stat_pvalue_manual(pwc,size = 5,hide.ns = TRUE)
+ESS_plot <- ggboxplot(Df, x = "Intensity", y = "ESS",
+          color = "Modality", palette = get_palette("Dark2", 8),
+          ylab = "Endothelial Shear Stress (dynes/cm2)") +
+  stat_pvalue_manual(pwc,size = 1,hide.ns = T)
+ESS_plot
+ggsave("ESS_plot.png")
 
-ggplot(SA,aes(Intensity,Velocity, fill= factor(Modality))) +
-  geom_boxplot() +
-  stat_pvalue_manual(pwc,size = 7,hide.ns = TRUE)
+
+
+## RE
+lmModel2 = lmer(RE_B ~ Modality + Intensity + Modality*Intensity + (1|ID),
+                data=Df, REML=TRUE)
+summary(lmModel2)
+# mixed model
+anova(lmModel2)
+#test of the random effects in the model
+rand(lmModel2)
+
+pwc2 <- Df %>%
+  group_by(Intensity) %>%
+  pairwise_t_test(RE_B ~ Modality, paired = T,
+                  p.adjust.method	= "holm")
+pwc2 %>% kable()%>%
+  kable_classic_2(full_width = F)
+# Effect size Cohen's D with Hedge's g correction for small sample size
+effect2 <-Df %>%
+  group_by(Intensity)  %>% cohens_d(RE_B ~ Modality,
+                                    paired = TRUE, hedges.correction = TRUE)
+effect2 %>% kable()%>%
+  kable_classic_2(full_width = F)
+
+
+pwc2 <- pwc2 %>% add_xy_position(x = "RE_B")
+Reynols_plot <- ggboxplot(Df, x = "Intensity", y = "RE_B",
+                                      color = "Modality", palette = get_palette("Dark2", 8),
+                                      ylab = "Reynolds Number (RE)") +
+  stat_pvalue_manual(pwc,size = 1,hide.ns = T)
+Reynols_plot
+ggsave("Reynols_plot.png")
+
+
+
+## ESS retro
+lmModel3 = lmer(ESS_retro ~ Modality + Intensity + Modality*Intensity + (1|ID),
+                data=Df, REML=TRUE)
+summary(lmModel3)
+# mixed model
+anova(lmModel3)
+#test of the random effects in the model
+rand(lmModel3)
+
+pwc3 <- Df %>%
+  group_by(Intensity) %>%
+  pairwise_t_test(ESS_retro ~ Modality, paired = T,
+                  p.adjust.method	= "holm")
+pwc3 %>% kable()%>%
+  kable_classic_2(full_width = F)
+# Effect size Cohen's D with Hedge's g correction for small sample size
+effect3 <-Df %>%
+  group_by(Intensity)  %>% cohens_d(ESS_retro ~ Modality,
+                                    paired = TRUE, hedges.correction = TRUE)
+effect3 %>% kable()%>%
+  kable_classic_2(full_width = F)
+
+
+pwc3 <- pwc3 %>% add_xy_position(x = "ESS_retro")
+ESS_retro_plot <- ggboxplot(Df, x = "Intensity", y = "ESS_retro",
+                          color = "Modality", palette = get_palette("Dark2", 8),
+                          ylab = "Endothelial Shear Stress Retrograde (dynes/cm2)") +
+  stat_pvalue_manual(pwc3,size = 1,hide.ns = T)
+ESS_retro_plot
+ggsave("ESS_retro_plot.png")
+
+
