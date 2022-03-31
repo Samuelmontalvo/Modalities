@@ -14,7 +14,6 @@ library(lmerTest)
 library(forcats)
 library(cvcqv)
 
-
 #priori power analysis
 library(pwr)
 anova_pwr <- pwr.anova.test(f=0.4,k=14,n=14,sig.level=0.05)
@@ -28,6 +27,35 @@ Df <- Df %>%
   mutate(Modality = fct_relevel(Modality, "Baseline", "Baseline two", "Arm-ergometer",
                                 "Cycle-ergometer", "Treadmill", "Biceps", "Bench",
                                 "Squat"))
+
+Df %>% filter(Modality == "Baseline") %>% group_by(Intensity) %>%
+  shapiro_test(ESS)
+Df %>% filter(Modality == "Arm-ergometer") %>% group_by(Intensity) %>%
+  shapiro_test(ESS)
+Df %>% filter(Modality == "Cycle-ergometer") %>% group_by(Intensity) %>%
+  shapiro_test(ESS)
+Df %>% filter(Modality == "Treadmill") %>% group_by(Intensity) %>%
+  shapiro_test(ESS)
+Df %>% filter(Modality == "Treadmill") %>% filter(Sex == "Male") %>%
+  group_by(Intensity) %>% shapiro_test(ESS)
+Df %>% filter(Modality == "Treadmill") %>% filter(Sex == "Female") %>%
+  group_by(Intensity) %>% shapiro_test(ESS)
+Df %>% filter(Modality == "Biceps") %>% group_by(Intensity) %>%
+  shapiro_test(ESS)
+Df %>% filter(Modality == "Bench") %>% group_by(Intensity) %>%
+  shapiro_test(ESS)
+Df %>% filter(Modality == "Bench") %>% filter(Sex == "Male") %>%
+  group_by(Intensity) %>% shapiro_test(ESS)
+Df %>% filter(Modality == "Bench") %>% filter(Sex == "Female") %>%
+  group_by(Intensity) %>% shapiro_test(ESS)
+Df %>% filter(Modality == "Bench") %>% group_by(Intensity) %>%
+  shapiro_test(ESS)
+Df %>% filter(Modality == "Squat") %>% group_by(Intensity) %>%
+  shapiro_test(ESS)
+Df %>% filter(Modality == "Squat") %>% filter(Sex == "Male") %>%
+  group_by(Intensity) %>% shapiro_test(ESS)
+Df %>% filter(Modality == "Squat") %>% filter(Sex == "Female") %>%
+  group_by(Intensity) %>% shapiro_test(ESS)
 
 #Descriptives
 ##Drop unused columns from psych package
@@ -128,7 +156,7 @@ Df %>% group_by(Modality) %>%  shapiro_test(ESS)
 
 
 lmModel = lmer(ESS ~ Modality + Intensity + Sex + Modality*Intensity + (1|ID),
-               data=Df, REML=TRUE)
+               data=Df, REML=FALSE)
 summary(lmModel)
 # mixed model
 anova(lmModel)
@@ -137,7 +165,6 @@ rand(lmModel)
 
 df2 <- Df %>% filter(Intensity == "Low" | Intensity == "Moderate" |
                        Intensity == "High")
-
 
 pwc <- Df %>% group_by(Intensity) %>%
   pairwise_t_test(ESS ~ Modality, paired = T,
@@ -295,7 +322,7 @@ ggsave("ESS_within_plot.jpeg")
 
 ## RE
 lmModel2 = lmer(RE_B ~ Modality + Intensity + Modality*Intensity + Sex + (1|ID),
-                data=Df, REML=TRUE)
+                data=Df, REML=FALSE)
 summary(lmModel2)
 # mixed model
 anova(lmModel2)
